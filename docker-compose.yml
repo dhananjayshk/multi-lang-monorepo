@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  python-service:
+    image: yourdockerhub/python-service:latest
+    ports:
+      - "8000:8000"
+  go-service:
+    image: yourdockerhub/go-service:latest
+  java-service:
+    image: yourdockerhub/java-service:latest
+  rust-service:
+    image: yourdockerhub/rust-service:latest
+
