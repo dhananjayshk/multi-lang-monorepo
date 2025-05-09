@@ -1,0 +1,28 @@
+filebeat.inputs:
+  - type: log
+    paths:
+      - /logs/python/*.log
+    fields:
+      service: python
+
+  - type: log
+    paths:
+      - /logs/go/*.log
+    fields:
+      service: go
+
+  - type: log
+    paths:
+      - /logs/java/*.log
+    fields:
+      service: java
+
+  - type: log
+    paths:
+      - /logs/rust/*.log
+    fields:
+      service: rust
+
+output.logstash:
+  hosts: ["logstash:5044"]
+

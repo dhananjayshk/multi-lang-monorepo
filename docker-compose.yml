@@ -1,13 +1,86 @@
 version: '3.8'
+
 services:
+  # ELK STACK
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "xpack.security.enabled=false"
+    ports:
+      - "9200:9200"
+    networks: [elk]
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks: [elk]
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.13.0
+    container_name: logstash
+    ports:
+      - "5044:5044"
+    volumes:
+      - ./elk/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    depends_on:
+      - elasticsearch
+    networks: [elk]
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.13.0
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./logs:/logs
+    depends_on:
+      - logstash
+    networks: [elk]
+
+  # LANGUAGE SERVICES
   python-service:
-    image: yourdockerhub/python-service:latest
+    build:
+      context: ./python-service
     ports:
       - "8000:8000"
+    volumes:
+      - ./logs/python:/app/logs
+    networks: [elk]
+
   go-service:
-    image: yourdockerhub/go-service:latest
+    build:
+      context: ./go-service
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./logs/go:/app/logs
+    networks: [elk]
+
   java-service:
-    image: yourdockerhub/java-service:latest
+    build:
+      context: ./java-service
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./logs/java:/app/logs
+    networks: [elk]
+
   rust-service:
-    image: yourdockerhub/rust-service:latest
+    build:
+      context: ./rust-service
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./logs/rust:/app/logs
+    networks: [elk]
+
+networks:
+  elk:
+    driver: bridge
 

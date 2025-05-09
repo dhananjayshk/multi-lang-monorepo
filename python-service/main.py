@@ -1,8 +1,12 @@
-from fastapi import FastAPI
+import logging
 
-app = FastAPI()
+# Set up logging to a file
+logging.basicConfig(filename='/app/logs/python/app.log', level=logging.INFO)
 
-@app.get("/")
-def read_root():
-    return {"message": "Hello from Python"}
+def main():
+    logging.info("Python service started")
+    print("Hello from Python service!")
+
+if __name__ == "__main__":
+    main()
 
