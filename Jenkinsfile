@@ -3,27 +3,48 @@ pipeline {
 
   environment {
     DEPLOY_SERVER = 'your.remote.server'
-    SSH_CREDENTIALS_ID = 'ssh-credentials-id'
-    VERSION = "${env.GIT_TAG_NAME ?: 'latest'}"
+    DOCKER_HUB_USER = credentials('docker-hub-user') // stored in Jenkins
+    DOCKER_HUB_PASS = credentials('docker-hub-pass')
+    GIT_CRED_ID     = 'github-pat' // Stored GitHub PAT (as secret text)
+    SSH_CRED_ID     = 'server-ssh' // Stored SSH credentials
+    VERSION         = "${env.GIT_TAG_NAME ?: 'latest'}"
   }
 
   stages {
-    stage('Checkout') {
+    stage('Checkout Code') {
       steps {
-        checkout scm
+        echo "Cloning repository using GitHub PAT..."
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: '*/main']],
+          doGenerateSubmoduleConfigurations: false,
+          extensions: [],
+          userRemoteConfigs: [[
+            url: 'https://github.com/yourusername/yourrepo.git ',
+            credentialsId: env.GIT_CRED_ID
+          ]]
+        ])
       }
     }
 
     stage('Run Database Migrations') {
       steps {
-        sshagent([env.SSH_CREDENTIALS_ID]) {
-          sh """
-          ssh -o StrictHostKeyChecking=no user@${DEPLOY_SERVER} '
-            cd /opt/multi-lang-monorepo/python-service &&
-            docker run --rm -v \$(pwd):/app -w /app python:3.12-slim \
-            bash -c "pip install -r requirements.txt && alembic upgrade head"
-          '
-          """
+        script {
+          sshagent([env.SSH_CRED_ID]) {
+            sh """
+              set -ex
+              cd \$(mktemp -d)
+              cp -r ${WORKSPACE}/db/migrations .
+              scp -o StrictHostKeyChecking=no migrations user@${DEPLOY_SERVER}:/tmp/
+              ssh -o StrictHostKeyChecking=no user@${DEPLOY_SERVER} '
+                cd /opt/multi-lang-monorepo/python-service &&
+                docker run --rm \\
+                  -v \$(pwd):/app \\
+                  -w /app python:3.12-slim \\
+                  bash -c "pip install alembic && alembic upgrade head"
+              '
+            """
+          }
         }
       }
     }
@@ -34,8 +55,9 @@ pipeline {
           def services = ['python-service', 'go-service', 'java-service', 'rust-service']
           services.each { svc ->
             sh """
-            docker build -t yourdockerhub/${svc}:${VERSION} ${svc}
-            docker push yourdockerhub/${svc}:${VERSION}
+              docker build -t yourdockerhub/${svc}:${VERSION} ${svc}
+              docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASS}
+              docker push yourdockerhub/${svc}:${VERSION}
             """
           }
         }
@@ -44,13 +66,15 @@ pipeline {
 
     stage('Deploy Services') {
       steps {
-        sshagent([env.SSH_CREDENTIALS_ID]) {
+        sshagent([env.SSH_CRED_ID]) {
           sh """
-          ssh user@${DEPLOY_SERVER} '
-            cd /opt/multi-lang-monorepo &&
-            docker-compose pull &&
-            docker-compose up -d
-          '
+            ssh -o StrictHostKeyChecking=no user@${DEPLOY_SERVER} '
+              mkdir -p /opt/multi-lang-monorepo
+              cp ${WORKSPACE}/docker-compose.yml /opt/multi-lang-monorepo/
+              cd /opt/multi-lang-monorepo &&
+              docker-compose pull &&
+              docker-compose up -d
+            '
           """
         }
       }
@@ -59,11 +83,10 @@ pipeline {
 
   post {
     failure {
-      echo 'Deployment failed!'
+      echo '❌ Deployment failed!'
     }
     success {
-      echo 'Deployment successful!'
+      echo '✅ Deployment successful!'
     }
   }
 }
-
