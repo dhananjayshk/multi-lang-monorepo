@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     DEPLOY_SERVER = 'your.remote.server'
-    GIT_CRED_ID     = 'github-pat' // Stored GitHub PAT (as secret text)
+    GIT_CRED_ID     = 'github-credentials' // Stored GitHub PAT (as secret text)
     SSH_CRED_ID     = 'server-ssh' // Stored SSH credentials
     VERSION         = "${env.GIT_TAG_NAME ?: 'latest'}"
   }
@@ -19,7 +19,7 @@ pipeline {
           extensions: [],
           userRemoteConfigs: [[
             url: 'https://github.com/dhananjayshk/multi-lang-monorepo.git ',
-            credentialsId: 'github-credentials'
+            credentialsId: env.GIT_CRED_ID
           ]]
         ])
       }
