@@ -18,7 +18,7 @@ pipeline {
           doGenerateSubmoduleConfigurations: false,
           extensions: [],
           userRemoteConfigs: [[
-            url: 'https://github.com/yourusername/yourrepo.git ',
+            url: 'https://github.com/dhananjayshk/multi-lang-monorepo.git ',
             credentialsId: env.GIT_CRED_ID
           ]]
         ])
