@@ -50,19 +50,25 @@ pipeline {
     }
 
     stage('Build and Push Docker Images') {
-      steps {
-        script {
-          def services = ['python-service', 'go-service', 'java-service', 'rust-service']
-          services.each { svc ->
-            sh """
-              docker build -t yourdockerhub/${svc}:${VERSION} ${svc}
-              docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASS}
-              docker push yourdockerhub/${svc}:${VERSION}
-            """
-          }
+  steps {
+    script {
+      def services = ['python-service', 'go-service', 'java-service', 'rust-service']
+      withCredentials([usernamePassword(
+          usernameVariable: 'DOCKER_USER',
+          passwordVariable: 'DOCKER_PASS',
+          credentialsId: 'docker-hub-user'
+      )]) {
+        services.each { svc ->
+          sh """
+            docker build -t yourdockerhub/${svc}:${VERSION} ${svc}
+            docker login -u \$DOCKER_USER -p \$DOCKER_PASS
+            docker push yourdockerhub/${svc}:${VERSION}
+          """
         }
       }
     }
+  }
+}
 
     stage('Deploy Services') {
       steps {
