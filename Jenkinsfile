@@ -3,8 +3,6 @@ pipeline {
 
   environment {
     DEPLOY_SERVER = 'your.remote.server'
-    DOCKER_HUB_USER = credentials('docker-hub-user') // stored in Jenkins
-    DOCKER_HUB_PASS = credentials('docker-hub-pass')
     GIT_CRED_ID     = 'github-pat' // Stored GitHub PAT (as secret text)
     SSH_CRED_ID     = 'server-ssh' // Stored SSH credentials
     VERSION         = "${env.GIT_TAG_NAME ?: 'latest'}"
@@ -56,7 +54,7 @@ pipeline {
       withCredentials([usernamePassword(
           usernameVariable: 'DOCKER_USER',
           passwordVariable: 'DOCKER_PASS',
-          credentialsId: 'docker-hub-user'
+          credentialsId: 'docker-hub-credentials'
       )]) {
         services.each { svc ->
           sh """
