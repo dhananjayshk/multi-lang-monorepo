@@ -19,7 +19,7 @@ pipeline {
           extensions: [],
           userRemoteConfigs: [[
             url: 'https://github.com/dhananjayshk/multi-lang-monorepo.git ',
-            credentialsId: env.GIT_CRED_ID
+            credentialsId: 'github-credentials'
           ]]
         ])
       }
